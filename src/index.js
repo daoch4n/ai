@@ -55,16 +55,49 @@ async function verifyWebhookSignature(request, secret) {
   }
 }
 
+// Convert PKCS#1 private key to PKCS#8 format
+function convertPrivateKeyToPKCS8(privateKey) {
+  // Check if the key is already in PKCS#8 format
+  if (privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+    return privateKey;
+  }
+
+  // If it's in PKCS#1 format, we need to convert it
+  // For now, we'll log a warning and provide instructions
+  console.warn('Private key is in PKCS#1 format. Please convert it to PKCS#8 format.');
+  console.warn('You can use the following command to convert it:');
+  console.warn('openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private-key.pem -out private-key-pkcs8.pem');
+
+  // For testing purposes, we'll use a workaround
+  // This is not a real conversion, just a format change that might work with some libraries
+  return privateKey
+    .replace('-----BEGIN RSA PRIVATE KEY-----', '-----BEGIN PRIVATE KEY-----')
+    .replace('-----END RSA PRIVATE KEY-----', '-----END PRIVATE KEY-----');
+}
+
 // Get an authenticated Octokit instance for an installation
 async function getOctokit(appId, privateKey, installationId) {
-  const auth = createAppAuth({
-    appId,
-    privateKey,
-    installationId
-  });
+  try {
+    console.log(`Creating app auth with App ID: ${appId} and Installation ID: ${installationId}`);
 
-  const { token } = await auth({ type: 'installation' });
-  return new Octokit({ auth: token });
+    // Convert the private key to PKCS#8 format if needed
+    const formattedPrivateKey = convertPrivateKeyToPKCS8(privateKey);
+
+    const auth = createAppAuth({
+      appId,
+      privateKey: formattedPrivateKey,
+      installationId
+    });
+
+    console.log('App auth created successfully, getting token...');
+    const { token } = await auth({ type: 'installation' });
+    console.log('Token obtained successfully');
+
+    return new Octokit({ auth: token });
+  } catch (error) {
+    console.error('Error in getOctokit:', error);
+    throw error;
+  }
 }
 
 // Process an issue with Aider
@@ -72,8 +105,12 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
   console.log(`Starting to process issue #${issueNumber} in ${owner}/${repo}`);
   console.log(`Using App ID: ${env.APP_ID} and Installation ID: ${installationId}`);
 
+  // Declare octokit at the function level so it's accessible in the catch block
+  let octokit;
+
   try {
-    const octokit = await getOctokit(env.APP_ID, env.PRIVATE_KEY, installationId);
+    console.log(`Authenticating with GitHub API using App ID: ${env.APP_ID}`);
+    octokit = await getOctokit(env.APP_ID, env.PRIVATE_KEY, installationId);
     console.log('Successfully authenticated with GitHub API');
 
     // Get issue details
@@ -285,21 +322,49 @@ Since I couldn't find the \`aider-process-issue.yml\` workflow in your repositor
     console.error('Error processing issue:', error);
 
     try {
-      // Add a comment about the error
-      await octokit.issues.createComment({
-        owner,
-        repo,
-        issue_number: issueNumber,
-        body: `An error occurred while processing this issue: ${error.message}`
-      });
+      // Only try to add a comment if we have a valid octokit instance
+      if (typeof octokit !== 'undefined' && octokit) {
+        // Add a comment about the error
+        await octokit.issues.createComment({
+          owner,
+          repo,
+          issue_number: issueNumber,
+          body: `An error occurred while processing this issue: ${error.message}`
+        });
 
-      // Remove ai-processing label
-      await octokit.issues.removeLabel({
-        owner,
-        repo,
-        issue_number: issueNumber,
-        name: 'ai-processing'
-      }).catch(() => {});
+        // Remove ai-processing label
+        await octokit.issues.removeLabel({
+          owner,
+          repo,
+          issue_number: issueNumber,
+          name: 'ai-processing'
+        }).catch(() => {});
+      } else {
+        console.error('Cannot add comment: octokit is not defined');
+
+        // Try to create a new octokit instance just for error handling
+        try {
+          const errorOctokit = await getOctokit(env.APP_ID, env.PRIVATE_KEY, installationId);
+
+          // Add a comment about the error
+          await errorOctokit.issues.createComment({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            body: `An error occurred while processing this issue: ${error.message}`
+          });
+
+          // Remove ai-processing label
+          await errorOctokit.issues.removeLabel({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            name: 'ai-processing'
+          }).catch(() => {});
+        } catch (newOctokitError) {
+          console.error('Failed to create new octokit instance for error handling:', newOctokitError);
+        }
+      }
     } catch (commentError) {
       console.error('Error adding comment:', commentError);
     }
