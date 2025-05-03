@@ -20,7 +20,9 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          # Try to use npm ci first, fall back to npm install if it fails
+          npm ci || npm install
 
       - name: Deploy with Wrangler
         uses: cloudflare/wrangler-action@v3
