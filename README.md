@@ -40,6 +40,27 @@ A Cloudflare Worker that implements a GitHub App to automatically generate pull 
 
 ### 2. Deploy the Cloudflare Worker
 
+#### Option 1: Deploy with GitHub Actions (Recommended)
+
+1. Add the following secrets to your GitHub repository:
+   - `CF_API_TOKEN`: Your Cloudflare API token with Worker Scripts Edit permission
+   - `CF_ACCOUNT_ID`: Your Cloudflare account ID
+   - `APP_ID`: Your GitHub App ID
+   - `WEBHOOK_SECRET`: Your GitHub App webhook secret
+   - `PRIVATE_KEY`: Your GitHub App private key (the entire PEM file content)
+   - `GEMINI_API_KEY`: Your Google API key for Gemini
+
+2. Update the `wrangler.toml` file with your GitHub App ID and webhook secret:
+   ```toml
+   [vars]
+   APP_ID = "your-github-app-id"
+   WEBHOOK_SECRET = "your-webhook-secret"
+   ```
+
+3. Push your changes to the main branch, and the GitHub Actions workflow will automatically deploy the worker.
+
+#### Option 2: Deploy Manually
+
 1. Install Wrangler CLI:
    ```
    npm install -g wrangler
