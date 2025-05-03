@@ -2,6 +2,11 @@ name = "aiderfixer"
 main = "src/index.js"
 compatibility_date = "2024-05-01"
 
+# Logging configuration
+[logs]
+enabled = true
+include_invocation_logs = true
+
 [vars]
 # Define your environment variables here
 # APP_ID = "your-github-app-id"

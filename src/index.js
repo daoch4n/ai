@@ -40,23 +40,27 @@ async function getOctokit(appId, privateKey, installationId) {
     privateKey,
     installationId
   });
-  
+
   const { token } = await auth({ type: 'installation' });
   return new Octokit({ auth: token });
 }
 
 // Process an issue with Aider
 async function processIssue(owner, repo, issueNumber, installationId, env) {
-  const octokit = await getOctokit(env.APP_ID, env.PRIVATE_KEY, installationId);
-  
+  console.log(`Starting to process issue #${issueNumber} in ${owner}/${repo}`);
+  console.log(`Using App ID: ${env.APP_ID} and Installation ID: ${installationId}`);
+
   try {
+    const octokit = await getOctokit(env.APP_ID, env.PRIVATE_KEY, installationId);
+    console.log('Successfully authenticated with GitHub API');
+
     // Get issue details
     const { data: issue } = await octokit.issues.get({
       owner,
       repo,
       issue_number: issueNumber
     });
-    
+
     // Add ai-processing label
     await octokit.issues.addLabels({
       owner,
@@ -64,14 +68,14 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
       issue_number: issueNumber,
       labels: ['ai-processing']
     });
-    
+
     // Get default branch
     const { data: repository } = await octokit.repos.get({
       owner,
       repo
     });
     const defaultBranch = repository.default_branch;
-    
+
     // Get latest commit on default branch
     const { data: commits } = await octokit.repos.listCommits({
       owner,
@@ -80,7 +84,7 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
       per_page: 1
     });
     const latestCommitSha = commits[0].sha;
-    
+
     // Create a new branch
     const branchName = `ai-fix/issue-${issueNumber}`;
     await octokit.git.createRef({
@@ -89,10 +93,10 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
       ref: `refs/heads/${branchName}`,
       sha: latestCommitSha
     });
-    
+
     // Since we can't run Aider directly in a Cloudflare Worker, we'll use a different approach
     // We'll create a workflow dispatch event to trigger a GitHub Action that runs Aider
-    
+
     // First, check if the repository has the aider-process-issue.yml workflow
     let hasWorkflow = false;
     try {
@@ -100,15 +104,15 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
         owner,
         repo
       });
-      
-      hasWorkflow = workflows.workflows.some(workflow => 
-        workflow.name === '🤖 AI Process Issue' || 
+
+      hasWorkflow = workflows.workflows.some(workflow =>
+        workflow.name === '🤖 AI Process Issue' ||
         workflow.path.includes('aider-process-issue.yml')
       );
     } catch (error) {
       console.error('Error checking for workflow:', error);
     }
-    
+
     if (hasWorkflow) {
       // Trigger the workflow
       await octokit.actions.createWorkflowDispatch({
@@ -121,7 +125,7 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
           branch_name: branchName
         }
       });
-      
+
       // Add a comment to the issue
       await octokit.issues.createComment({
         owner,
@@ -129,10 +133,10 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
         issue_number: issueNumber,
         body: `I've started processing this issue. A pull request will be created shortly.`
       });
-      
+
       return;
     }
-    
+
     // If the repository doesn't have the workflow, we'll create a simple PR with instructions
     const fileContent = `# AI Fix for Issue #${issueNumber}
 
@@ -150,7 +154,7 @@ To complete this fix, you'll need to:
 4. The pull request will be updated automatically
 
 Alternatively, you can set up the \`aider-process-issue.yml\` workflow in your repository to automate this process.`;
-    
+
     // Create a README.md file in the branch
     const { data: readmeContent } = await octokit.repos.getContent({
       owner,
@@ -158,14 +162,14 @@ Alternatively, you can set up the \`aider-process-issue.yml\` workflow in your r
       path: 'README.md',
       ref: defaultBranch
     }).catch(() => ({ data: null }));
-    
+
     const readmeBlob = await octokit.git.createBlob({
       owner,
       repo,
       content: Buffer.from(fileContent).toString('base64'),
       encoding: 'base64'
     });
-    
+
     // Create a tree with the new file
     const { data: tree } = await octokit.git.createTree({
       owner,
@@ -180,7 +184,7 @@ Alternatively, you can set up the \`aider-process-issue.yml\` workflow in your r
         }
       ]
     });
-    
+
     // Create a commit
     const { data: commit } = await octokit.git.createCommit({
       owner,
@@ -189,7 +193,7 @@ Alternatively, you can set up the \`aider-process-issue.yml\` workflow in your r
       tree: tree.sha,
       parents: [latestCommitSha]
     });
-    
+
     // Update the branch reference
     await octokit.git.updateRef({
       owner,
@@ -197,7 +201,7 @@ Alternatively, you can set up the \`aider-process-issue.yml\` workflow in your r
       ref: `heads/${branchName}`,
       sha: commit.sha
     });
-    
+
     // Create a pull request
     const { data: pullRequest } = await octokit.pulls.create({
       owner,
@@ -221,7 +225,7 @@ Closes #${issueNumber}`,
       head: branchName,
       base: defaultBranch
     });
-    
+
     // Add labels to the PR
     await octokit.issues.addLabels({
       owner,
@@ -229,7 +233,7 @@ Closes #${issueNumber}`,
       issue_number: pullRequest.number,
       labels: ['ai-generated']
     });
-    
+
     // Add a comment to the issue
     await octokit.issues.createComment({
       owner,
@@ -239,7 +243,7 @@ Closes #${issueNumber}`,
 
 Since I couldn't find the \`aider-process-issue.yml\` workflow in your repository, I've created a placeholder PR. You'll need to manually implement the changes to fix the issue.`
     });
-    
+
     // Remove ai-processing label and add ai-processed
     await octokit.issues.removeLabel({
       owner,
@@ -247,17 +251,17 @@ Since I couldn't find the \`aider-process-issue.yml\` workflow in your repositor
       issue_number: issueNumber,
       name: 'ai-processing'
     }).catch(() => {});
-    
+
     await octokit.issues.addLabels({
       owner,
       repo,
       issue_number: issueNumber,
       labels: ['ai-processed']
     });
-    
+
   } catch (error) {
     console.error('Error processing issue:', error);
-    
+
     try {
       // Add a comment about the error
       await octokit.issues.createComment({
@@ -266,7 +270,7 @@ Since I couldn't find the \`aider-process-issue.yml\` workflow in your repositor
         issue_number: issueNumber,
         body: `An error occurred while processing this issue: ${error.message}`
       });
-      
+
       // Remove ai-processing label
       await octokit.issues.removeLabel({
         owner,
@@ -277,44 +281,71 @@ Since I couldn't find the \`aider-process-issue.yml\` workflow in your repositor
     } catch (commentError) {
       console.error('Error adding comment:', commentError);
     }
+  } catch (error) {
+    console.error(`Fatal error processing issue #${issueNumber}:`, error);
   }
+
+  console.log(`Finished processing issue #${issueNumber}`);
 }
 
 // Handle webhook events
 router.post('/webhook', async (request, env) => {
+  console.log('Received webhook event');
+
   // Verify the webhook signature
   const isValid = await verifyWebhookSignature(request, env.WEBHOOK_SECRET);
   if (!isValid) {
+    console.error('Invalid webhook signature');
     return new Response('Unauthorized', { status: 401 });
   }
-  
+
+  console.log('Webhook signature verified successfully');
+
   // Parse the request body
   const body = await request.json();
   const event = request.headers.get('x-github-event');
-  
+
+  console.log(`Received ${event} event with action: ${body.action}`);
+
   // Process issues.labeled events
   if (event === 'issues' && body.action === 'labeled') {
     const label = body.label.name;
+    console.log(`Label added: ${label}`);
+
     if (label === 'aider-pro') {
       const owner = body.repository.owner.login;
       const repo = body.repository.name;
       const issueNumber = body.issue.number;
       const installationId = body.installation.id;
-      
+
+      console.log(`Processing issue #${issueNumber} in ${owner}/${repo} with installation ID ${installationId}`);
+
       // Process the issue asynchronously
       // In Cloudflare Workers, we can't use async processing outside of the request handler
       // So we'll return a response immediately and do the processing within the request handler
       processIssue(owner, repo, issueNumber, installationId, env)
-        .catch(error => console.error('Error processing issue:', error));
-      
-      return new Response(JSON.stringify({ message: 'Processing issue' }), {
+        .catch(error => console.error(`Error processing issue #${issueNumber}:`, error));
+
+      return new Response(JSON.stringify({
+        message: 'Processing issue',
+        issue: issueNumber,
+        repository: `${owner}/${repo}`
+      }), {
         status: 202,
         headers: { 'Content-Type': 'application/json' }
       });
+    } else {
+      console.log(`Ignoring label ${label} (not aider-pro)`);
     }
+  } else {
+    console.log(`Ignoring event ${event} with action ${body.action} (not issues.labeled)`);
   }
-  
-  return new Response(JSON.stringify({ message: 'Event received' }), {
+
+  return new Response(JSON.stringify({
+    message: 'Event received',
+    event: event,
+    action: body.action || 'none'
+  }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
   });
