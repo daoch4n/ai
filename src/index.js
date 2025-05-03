@@ -162,170 +162,107 @@ async function getOctokit(appId, privateKey, installationId) {
 // Fallback method to create an Octokit instance for testing
 // This is NOT secure and should only be used for testing
 function getFallbackOctokit() {
-  console.log('Using fallback Octokit instance with limited functionality');
+  console.log('Using real Octokit instance with GitHub token');
 
-  // Create a mock Octokit instance with the methods we need
-  const mockOctokit = {
-    issues: {
-      get: async ({ owner, repo, issue_number }) => {
-        console.log(`Mock: Getting issue ${owner}/${repo}#${issue_number}`);
-        return {
-          data: {
-            title: `Mock Issue #${issue_number}`,
-            body: `This is a mock issue for testing in ${owner}/${repo}`
-          }
-        };
-      },
-      addLabels: async ({ owner, repo, issue_number, labels }) => {
-        console.log(`Mock: Added labels ${labels.join(', ')} to ${owner}/${repo}#${issue_number}`);
-        return { data: labels };
-      },
-      removeLabel: async ({ owner, repo, issue_number, name }) => {
-        console.log(`Mock: Removed label ${name} from ${owner}/${repo}#${issue_number}`);
-        return { data: {} };
-      },
-      createComment: async ({ owner, repo, issue_number, body }) => {
-        console.log(`Mock: Added comment to ${owner}/${repo}#${issue_number}: ${body}`);
-        return { data: { html_url: `https://github.com/${owner}/${repo}/issues/${issue_number}#mockcomment` } };
-      }
-    },
-    repos: {
-      get: async ({ owner, repo }) => {
-        console.log(`Mock: Getting repo info for ${owner}/${repo}`);
-        return { data: { default_branch: 'main' } };
-      },
-      listCommits: async ({ owner, repo, sha }) => {
-        console.log(`Mock: Listing commits for ${owner}/${repo} on branch ${sha}`);
-        return { data: [{ sha: `mock-sha-${Date.now()}` }] };
-      }
-    },
-    git: {
-      createRef: async ({ owner, repo, ref, sha }) => {
-        console.log(`Mock: Created ref ${ref} in ${owner}/${repo} pointing to ${sha}`);
-        return { data: { ref, object: { sha } } };
-      },
-      createBlob: async ({ owner, repo, content, encoding }) => {
-        console.log(`Mock: Created blob in ${owner}/${repo} with ${encoding} content`);
-        return { data: { sha: `mock-blob-sha-${Date.now()}` } };
-      },
-      createTree: async ({ owner, repo, base_tree, tree }) => {
-        console.log(`Mock: Created tree in ${owner}/${repo} with ${tree.length} items`);
-        return { data: { sha: `mock-tree-sha-${Date.now()}` } };
-      },
-      createCommit: async ({ owner, repo, message, tree, parents }) => {
-        console.log(`Mock: Created commit in ${owner}/${repo}: ${message}`);
-        return { data: { sha: `mock-commit-sha-${Date.now()}` } };
-      },
-      updateRef: async ({ owner, repo, ref, sha }) => {
-        console.log(`Mock: Updated ref ${ref} in ${owner}/${repo} to ${sha}`);
-        return { data: { ref, object: { sha } } };
-      }
-    },
-    pulls: {
-      create: async ({ owner, repo, title, body, head, base }) => {
-        console.log(`Mock: Created PR in ${owner}/${repo}: ${title}`);
-        console.log(`Mock: PR details: ${head} → ${base}`);
-        console.log(`Mock: PR body: ${body.substring(0, 100)}...`);
-
-        // Create a PR number based on the current timestamp
-        const prNumber = Math.floor(Date.now() / 1000) % 10000;
-
-        return {
-          data: {
-            number: prNumber,
-            html_url: `https://github.com/${owner}/${repo}/pull/${prNumber}`
-          }
-        };
-      }
-    },
-    actions: {
-      listRepoWorkflows: async ({ owner, repo }) => {
-        console.log(`Mock: Listing workflows for ${owner}/${repo}`);
-        return { data: { workflows: [] } };
-      },
-      createWorkflowDispatch: async ({ owner, repo, workflow_id, ref, inputs }) => {
-        console.log(`Mock: Dispatched workflow ${workflow_id} in ${owner}/${repo} on ${ref}`);
-        console.log(`Mock: Workflow inputs: ${JSON.stringify(inputs)}`);
-        return {};
-      }
+  // Create a real Octokit instance with a GitHub token
+  // This will allow us to make real API calls to GitHub
+  return new Octokit({
+    auth: 'github_pat_11AABCDEF0123456789', // Replace with a real GitHub token if needed
+    log: {
+      debug: (message) => console.log(`Octokit Debug: ${message}`),
+      info: (message) => console.log(`Octokit Info: ${message}`),
+      warn: (message) => console.log(`Octokit Warning: ${message}`),
+      error: (message) => console.log(`Octokit Error: ${message}`)
     }
-  };
-
-  // Add a special method to indicate this is a mock instance
-  mockOctokit.isMockInstance = true;
-
-  return mockOctokit;
+  });
 }
 
-// Process an issue with the mock Octokit instance
+// Process an issue with the real Octokit instance
 async function processMockIssue(octokit, owner, repo, issueNumber, env) {
   try {
-    console.log('Processing issue with mock Octokit instance');
+    console.log('Processing issue with real Octokit instance');
 
-    // Get issue details
-    const { data: issue } = await octokit.issues.get({
-      owner,
-      repo,
-      issue_number: issueNumber
-    });
+    try {
+      // Get issue details
+      const { data: issue } = await octokit.issues.get({
+        owner,
+        repo,
+        issue_number: issueNumber
+      });
 
-    console.log(`Processing mock issue: ${issue.title}`);
+      console.log(`Processing issue: ${issue.title}`);
 
-    // Add ai-processing label
-    await octokit.issues.addLabels({
-      owner,
-      repo,
-      issue_number: issueNumber,
-      labels: ['ai-processing']
-    });
+      // Add ai-processing label
+      await octokit.issues.addLabels({
+        owner,
+        repo,
+        issue_number: issueNumber,
+        labels: ['ai-processing']
+      });
 
-    // Add a comment explaining this is a simulation
-    console.log('Adding simulation notice comment');
-    await octokit.issues.createComment({
-      owner,
-      repo,
-      issue_number: issueNumber,
-      body: `⚠️ **This is a simulation only** ⚠️\n\nThe GitHub App is currently running in fallback mode due to authentication issues. A real pull request cannot be created at this time.\n\nPlease check the GitHub App configuration and ensure the private key is in PKCS#8 format.\n\nYou can convert your private key using this command:\n\`\`\`\nopenssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private-key.pem -out private-key-pkcs8.pem\n\`\`\``
-    });
+      // Add a comment explaining this is a simulation
+      console.log('Adding simulation notice comment');
+      const commentResult = await octokit.issues.createComment({
+        owner,
+        repo,
+        issue_number: issueNumber,
+        body: `⚠️ **This is a simulation only** ⚠️
 
-    // Create a mock PR
-    const { data: pullRequest } = await octokit.pulls.create({
-      owner,
-      repo,
-      title: `🤖 Mock Fix for #${issueNumber}: ${issue.title}`,
-      body: `This is a mock pull request for issue #${issueNumber}.\n\nThis PR was created in simulation mode because the GitHub App is not properly authenticated.`,
-      head: `mock-branch-${issueNumber}`,
-      base: 'main'
-    });
+The GitHub App is currently running in fallback mode due to authentication issues. A real pull request cannot be created at this time.
 
-    // Add a comment with the PR link
-    await octokit.issues.createComment({
-      owner,
-      repo,
-      issue_number: issueNumber,
-      body: `I've created a mock pull request: ${pullRequest.html_url}\n\nNote: This is just a simulation. The PR doesn't actually exist.`
-    });
+Please check the GitHub App configuration and ensure the private key is in PKCS#8 format.
 
-    // Add ai-processed label
-    await octokit.issues.addLabels({
-      owner,
-      repo,
-      issue_number: issueNumber,
-      labels: ['ai-processed']
-    });
+You can convert your private key using this command:
+\`\`\`
+openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in private-key.pem -out private-key-pkcs8.pem
+\`\`\``
+      });
 
-    // Remove ai-processing label
-    await octokit.issues.removeLabel({
-      owner,
-      repo,
-      issue_number: issueNumber,
-      name: 'ai-processing'
-    }).catch(() => {});
+      console.log(`Comment added: ${commentResult.data.html_url}`);
 
-    console.log('Mock processing completed successfully');
-    return true;
+      // Add ai-processed label
+      await octokit.issues.addLabels({
+        owner,
+        repo,
+        issue_number: issueNumber,
+        labels: ['ai-processed']
+      });
+
+      // Remove ai-processing label
+      await octokit.issues.removeLabel({
+        owner,
+        repo,
+        issue_number: issueNumber,
+        name: 'ai-processing'
+      }).catch(() => {});
+
+      console.log('Processing completed successfully');
+      return true;
+    } catch (apiError) {
+      console.error('Error making GitHub API calls:', apiError);
+
+      // Try with a simpler approach - just add a comment
+      try {
+        await octokit.issues.createComment({
+          owner,
+          repo,
+          issue_number: issueNumber,
+          body: `⚠️ **GitHub App Error** ⚠️
+
+The GitHub App encountered an error while processing this issue.
+
+Error: ${apiError.message}`
+        });
+
+        console.log('Added error comment to issue');
+        return true;
+      } catch (commentError) {
+        console.error('Error adding comment:', commentError);
+        return false;
+      }
+    }
   } catch (error) {
-    console.error('Error in mock processing:', error);
+    console.error('Error in processing:', error);
     return false;
   }
 }
