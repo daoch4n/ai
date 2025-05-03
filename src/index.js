@@ -193,18 +193,18 @@ function getFallbackOctokit(env) {
   return octokit;
 }
 
-// Process an issue with direct fetch API calls
+// Process an issue by triggering a GitHub Action
 async function processMockIssue(octokit, owner, repo, issueNumber, env) {
   try {
-    console.log('Processing issue with minimal fetch API call');
+    console.log('Processing issue by triggering a GitHub Action');
 
     // Create a simple controller with a short timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
-    // Use a minimal fetch request
-    const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`;
-    console.log(`Making minimal fetch request to: ${url}`);
+    // Trigger a repository dispatch event to run a GitHub Action
+    const url = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
+    console.log(`Triggering repository dispatch event: ${url}`);
 
     // Fire and forget - don't wait for the response
     fetch(url, {
@@ -216,21 +216,35 @@ async function processMockIssue(octokit, owner, repo, issueNumber, env) {
         'User-Agent': 'AiderFixer-GitHub-App'
       },
       body: JSON.stringify({
-        body: `🤖 Test comment from AiderFixer (${new Date().toISOString().slice(0, 19)})`
+        event_type: 'aider-add-comment',
+        client_payload: {
+          owner,
+          repo,
+          issue_number: issueNumber,
+          comment_body: `🤖 **AiderFixer GitHub App**
+
+This comment was added by the AiderFixer GitHub App via a repository dispatch event.
+
+Timestamp: ${new Date().toISOString()}`
+        }
       }),
       signal: controller.signal
     }).then(response => {
       clearTimeout(timeoutId);
-      console.log(`Fetch response received: ${response.status} ${response.statusText}`);
+      console.log(`Repository dispatch response: ${response.status} ${response.statusText}`);
       return response.text();
     }).then(text => {
-      console.log(`Response body: ${text.substring(0, 100)}...`);
+      if (text) {
+        console.log(`Response body: ${text.substring(0, 100)}...`);
+      } else {
+        console.log('Empty response body (expected for repository dispatch)');
+      }
     }).catch(error => {
-      console.error(`Fetch error: ${error.message}`);
+      console.error(`Repository dispatch error: ${error.message}`);
     });
 
     // Return immediately without waiting for the fetch to complete
-    console.log('Returning from processMockIssue without waiting for fetch to complete');
+    console.log('Returning from processMockIssue without waiting for repository dispatch to complete');
     return true;
   } catch (error) {
     console.error('Error in processMockIssue:', error);
