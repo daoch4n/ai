@@ -281,8 +281,6 @@ Since I couldn't find the \`aider-process-issue.yml\` workflow in your repositor
     } catch (commentError) {
       console.error('Error adding comment:', commentError);
     }
-  } catch (error) {
-    console.error(`Fatal error processing issue #${issueNumber}:`, error);
   }
 
   console.log(`Finished processing issue #${issueNumber}`);
