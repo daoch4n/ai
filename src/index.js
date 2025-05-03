@@ -193,27 +193,45 @@ function getFallbackOctokit(env) {
   return octokit;
 }
 
-// Process an issue with the real Octokit instance
+// Process an issue with direct fetch API calls
 async function processMockIssue(octokit, owner, repo, issueNumber, env) {
   try {
-    console.log('Processing issue with real Octokit instance');
+    console.log('Processing issue with direct fetch API calls');
 
     // Just add a simple comment to the issue
     console.log(`Adding comment to issue #${issueNumber} in ${owner}/${repo}`);
 
-    const result = await octokit.issues.createComment({
-      owner,
-      repo,
-      issue_number: issueNumber,
-      body: `🤖 **AiderFixer GitHub App Test**
+    // Use fetch API directly instead of Octokit
+    const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`;
+    console.log(`Making direct fetch request to: ${url}`);
 
-This is a test comment from the AiderFixer GitHub App. If you can see this comment, the GitHub App is working correctly!
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `token ${env.PAT_PAT}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'AiderFixer-GitHub-App'
+      },
+      body: JSON.stringify({
+        body: `🤖 **AiderFixer GitHub App Test**
+
+This is a test comment from the AiderFixer GitHub App using direct fetch API calls. If you can see this comment, the GitHub App is working correctly!
 
 Timestamp: ${new Date().toISOString()}`
+      })
     });
 
-    console.log(`Comment added successfully: ${result.data.html_url}`);
-    return true;
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`Comment added successfully: ${data.html_url}`);
+      return true;
+    } else {
+      const errorText = await response.text();
+      console.error(`GitHub API error: ${response.status} ${response.statusText}`);
+      console.error(`Error details: ${errorText}`);
+      return false;
+    }
   } catch (error) {
     console.error('Error adding comment to issue:', error);
     console.error(`Error details: ${error.message}`);
