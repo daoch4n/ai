@@ -196,16 +196,18 @@ function getFallbackOctokit(env) {
 // Process an issue with direct fetch API calls
 async function processMockIssue(octokit, owner, repo, issueNumber, env) {
   try {
-    console.log('Processing issue with direct fetch API calls');
+    console.log('Processing issue with minimal fetch API call');
 
-    // Just add a simple comment to the issue
-    console.log(`Adding comment to issue #${issueNumber} in ${owner}/${repo}`);
+    // Create a simple controller with a short timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
-    // Use fetch API directly instead of Octokit
+    // Use a minimal fetch request
     const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`;
-    console.log(`Making direct fetch request to: ${url}`);
+    console.log(`Making minimal fetch request to: ${url}`);
 
-    const response = await fetch(url, {
+    // Fire and forget - don't wait for the response
+    fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `token ${env.PAT_PAT}`,
@@ -214,27 +216,24 @@ async function processMockIssue(octokit, owner, repo, issueNumber, env) {
         'User-Agent': 'AiderFixer-GitHub-App'
       },
       body: JSON.stringify({
-        body: `🤖 **AiderFixer GitHub App Test**
-
-This is a test comment from the AiderFixer GitHub App using direct fetch API calls. If you can see this comment, the GitHub App is working correctly!
-
-Timestamp: ${new Date().toISOString()}`
-      })
+        body: `🤖 Test comment from AiderFixer (${new Date().toISOString().slice(0, 19)})`
+      }),
+      signal: controller.signal
+    }).then(response => {
+      clearTimeout(timeoutId);
+      console.log(`Fetch response received: ${response.status} ${response.statusText}`);
+      return response.text();
+    }).then(text => {
+      console.log(`Response body: ${text.substring(0, 100)}...`);
+    }).catch(error => {
+      console.error(`Fetch error: ${error.message}`);
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log(`Comment added successfully: ${data.html_url}`);
-      return true;
-    } else {
-      const errorText = await response.text();
-      console.error(`GitHub API error: ${response.status} ${response.statusText}`);
-      console.error(`Error details: ${errorText}`);
-      return false;
-    }
+    // Return immediately without waiting for the fetch to complete
+    console.log('Returning from processMockIssue without waiting for fetch to complete');
+    return true;
   } catch (error) {
-    console.error('Error adding comment to issue:', error);
-    console.error(`Error details: ${error.message}`);
+    console.error('Error in processMockIssue:', error);
     return false;
   }
 }
