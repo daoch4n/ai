@@ -306,103 +306,16 @@ Timestamp: ${new Date().toISOString()}`
   }
 }
 
-// Create a JWT token for GitHub App authentication
+// Skip GitHub App authentication and just use PAT_PAT
 async function createJWT(appId, privateKey) {
-  // Current time in seconds
-  const now = Math.floor(Date.now() / 1000);
-
-  // JWT header
-  const header = {
-    alg: 'RS256',
-    typ: 'JWT'
-  };
-
-  // JWT payload
-  const payload = {
-    iat: now,           // Issued at time
-    exp: now + 600,     // Expires in 10 minutes
-    iss: appId          // GitHub App ID
-  };
-
-  // Encode header and payload
-  const encodedHeader = btoa(JSON.stringify(header));
-  const encodedPayload = btoa(JSON.stringify(payload));
-
-  // Create the JWT signature using Web Crypto API
-  const encoder = new TextEncoder();
-  const data = encoder.encode(`${encodedHeader}.${encodedPayload}`);
-
-  // Import the private key
-  const pemHeader = '-----BEGIN PRIVATE KEY-----';
-  const pemFooter = '-----END PRIVATE KEY-----';
-  const pemContents = privateKey.trim();
-
-  // Make sure the private key is in the correct format
-  let formattedKey = pemContents;
-  if (!formattedKey.includes(pemHeader)) {
-    formattedKey = `${pemHeader}\n${formattedKey.replace(/-----BEGIN RSA PRIVATE KEY-----/, '').replace(/-----END RSA PRIVATE KEY-----/, '')}\n${pemFooter}`;
-  }
-
-  // Convert the PEM key to a format that can be imported
-  const pemDER = formattedKey
-    .replace(pemHeader, '')
-    .replace(pemFooter, '')
-    .replace(/\s+/g, '');
-
-  const binaryDER = atob(pemDER);
-  const buffer = new ArrayBuffer(binaryDER.length);
-  const bufView = new Uint8Array(buffer);
-  for (let i = 0; i < binaryDER.length; i++) {
-    bufView[i] = binaryDER.charCodeAt(i);
-  }
-
-  // Import the key
-  const key = await crypto.subtle.importKey(
-    'pkcs8',
-    buffer,
-    {
-      name: 'RSASSA-PKCS1-v1_5',
-      hash: { name: 'SHA-256' }
-    },
-    false,
-    ['sign']
-  );
-
-  // Sign the data
-  const signature = await crypto.subtle.sign(
-    { name: 'RSASSA-PKCS1-v1_5' },
-    key,
-    data
-  );
-
-  // Convert the signature to base64
-  const signatureBase64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
-
-  // Create the JWT token
-  return `${encodedHeader}.${encodedPayload}.${signatureBase64}`;
+  console.log('Skipping JWT creation and using a dummy token');
+  return 'dummy_jwt_token';
 }
 
-// Get an installation token for a GitHub App
+// Skip installation token retrieval and just use PAT_PAT
 async function getInstallationToken(jwt, installationId) {
-  const response = await fetch(
-    `https://api.github.com/app/installations/${installationId}/access_tokens`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${jwt}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'AiderFixer-GitHub-App'
-      }
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get installation token: ${response.status} ${response.statusText}\n${errorText}`);
-  }
-
-  const data = await response.json();
-  return data.token;
+  console.log('Skipping installation token retrieval and using PAT_PAT');
+  throw new Error('Forcing fallback to PAT_PAT');
 }
 
 // Process an issue with Aider
