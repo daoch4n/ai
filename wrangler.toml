@@ -1,5 +1,5 @@
 name = "aiderfixer"
-main = "src/index.js"
+main = "src/index.simple.js"
 compatibility_date = "2024-05-01"
 
 # Logging is enabled by default in the Cloudflare dashboard
@@ -11,4 +11,4 @@ compatibility_date = "2024-05-01"
 
 # Secrets that need to be set using wrangler:
 # wrangler secret put PRIVATE_KEY
-# wrangler secret put GEMINI_API_KEY
+# wrangler secret put PAT_PAT

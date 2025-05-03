@@ -29,12 +29,12 @@ jobs:
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: deploy src/index.js --name aiderfixer
+          command: deploy src/index.simple.js --name aiderfixer
         env:
           APP_ID: ${{ secrets.APP_ID }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PAT_PAT: ${{ secrets.PAT_PAT }}
 
       - name: Set Cloudflare Worker Secrets
@@ -44,7 +44,7 @@ jobs:
           npx wrangler secret put APP_ID --name aiderfixer <<< "${{ secrets.APP_ID }}"
           npx wrangler secret put WEBHOOK_SECRET --name aiderfixer <<< "${{ secrets.WEBHOOK_SECRET }}"
           npx wrangler secret put PRIVATE_KEY --name aiderfixer <<< "${{ secrets.PRIVATE_KEY }}"
-          npx wrangler secret put GEMINI_API_KEY --name aiderfixer <<< "${{ secrets.GEMINI_API_KEY }}"
+          # npx wrangler secret put GEMINI_API_KEY --name aiderfixer <<< "${{ secrets.GEMINI_API_KEY }}"
           npx wrangler secret put PAT_PAT --name aiderfixer <<< "${{ secrets.PAT_PAT }}"
           echo "Secrets set successfully!"
         env:
