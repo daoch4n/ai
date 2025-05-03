@@ -345,7 +345,7 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
   let octokit;
 
   // Force fallback mode for testing (set to true to always use fallback)
-  const forceFallback = false;
+  const forceFallback = true;
   if (forceFallback) {
     console.log('Forcing fallback mode for testing');
     octokit = getFallbackOctokit();
