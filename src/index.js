@@ -203,7 +203,10 @@ async function processMockIssue(octokit, owner, repo, issueNumber, env) {
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
     // Trigger a repository dispatch event to run a GitHub Action
-    const url = `https://api.github.com/repos/${owner}/${repo}/dispatches`;
+    // Always use the dtub/DaokoTube repository for the dispatch event
+    const dispatchOwner = 'dtub';
+    const dispatchRepo = 'DaokoTube';
+    const url = `https://api.github.com/repos/${dispatchOwner}/${dispatchRepo}/dispatches`;
     console.log(`Triggering repository dispatch event: ${url}`);
 
     // Fire and forget - don't wait for the response
@@ -218,13 +221,14 @@ async function processMockIssue(octokit, owner, repo, issueNumber, env) {
       body: JSON.stringify({
         event_type: 'aider-add-comment',
         client_payload: {
-          owner,
-          repo,
+          owner: dispatchOwner,
+          repo: dispatchRepo,
           issue_number: issueNumber,
           comment_body: `🤖 **AiderFixer GitHub App**
 
 This comment was added by the AiderFixer GitHub App via a repository dispatch event.
 
+Original repository: ${owner}/${repo}#${issueNumber}
 Timestamp: ${new Date().toISOString()}`
         }
       }),
