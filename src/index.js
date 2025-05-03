@@ -111,7 +111,7 @@ async function getOctokit(appId, privateKey, installationId) {
 
       // Try a fallback method - for testing only
       console.log('Trying fallback authentication method...');
-      const mockOctokit = getFallbackOctokit();
+      const mockOctokit = getFallbackOctokit(env);
 
       // Process the issue with the mock Octokit
       return processMockIssue(mockOctokit, owner, repo, issueNumber, env);
@@ -142,7 +142,7 @@ async function getOctokit(appId, privateKey, installationId) {
 
       // Try a fallback method - for testing only
       console.log('Trying fallback authentication method...');
-      const mockOctokit = getFallbackOctokit();
+      const mockOctokit = getFallbackOctokit(env);
 
       // Process the issue with the mock Octokit
       return processMockIssue(mockOctokit, owner, repo, issueNumber, env);
@@ -155,19 +155,19 @@ async function getOctokit(appId, privateKey, installationId) {
 
     // Try a fallback method - for testing only
     console.log('Trying fallback authentication method...');
-    return getFallbackOctokit();
+    return getFallbackOctokit(env);
   }
 }
 
 // Fallback method to create an Octokit instance for testing
 // This is NOT secure and should only be used for testing
-function getFallbackOctokit() {
+function getFallbackOctokit(env) {
   console.log('Using real Octokit instance with GitHub token');
 
   // Create a real Octokit instance with a GitHub token
   // This will allow us to make real API calls to GitHub
   return new Octokit({
-    auth: 'github_pat_11AABCDEF0123456789', // Replace with a real GitHub token if needed
+    auth: env.PAT_PAT || 'github_pat_11AABCDEF0123456789', // Use the PAT_PAT secret from GitHub Actions
     log: {
       debug: (message) => console.log(`Octokit Debug: ${message}`),
       info: (message) => console.log(`Octokit Info: ${message}`),
@@ -285,7 +285,7 @@ async function processIssue(owner, repo, issueNumber, installationId, env) {
   const forceFallback = true;
   if (forceFallback) {
     console.log('Forcing fallback mode for testing');
-    octokit = getFallbackOctokit();
+    octokit = getFallbackOctokit(env);
     // Skip the regular authentication process
     return processMockIssue(octokit, owner, repo, issueNumber, env);
   }
@@ -548,7 +548,7 @@ Since I couldn't find the \`aider-process-issue.yml\` workflow in your repositor
 
         // Use the fallback mock Octokit instance
         console.log('Using fallback mock Octokit for error handling');
-        const mockOctokit = getFallbackOctokit();
+        const mockOctokit = getFallbackOctokit(env);
 
         // Process the issue with the mock Octokit
         return processMockIssue(mockOctokit, owner, repo, issueNumber, env);
@@ -558,7 +558,7 @@ Since I couldn't find the \`aider-process-issue.yml\` workflow in your repositor
 
       // Last resort: try with mock Octokit
       console.log('Last resort: using mock Octokit');
-      const mockOctokit = getFallbackOctokit();
+      const mockOctokit = getFallbackOctokit(env);
       return processMockIssue(mockOctokit, owner, repo, issueNumber, env);
     }
   }
