@@ -35,3 +35,16 @@ jobs:
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Set Cloudflare Worker Secrets
+        if: success()
+        run: |
+          echo "Setting Cloudflare Worker secrets..."
+          npx wrangler secret put APP_ID --name aiderfixer <<< "${{ secrets.APP_ID }}"
+          npx wrangler secret put WEBHOOK_SECRET --name aiderfixer <<< "${{ secrets.WEBHOOK_SECRET }}"
+          npx wrangler secret put PRIVATE_KEY --name aiderfixer <<< "${{ secrets.PRIVATE_KEY }}"
+          npx wrangler secret put GEMINI_API_KEY --name aiderfixer <<< "${{ secrets.GEMINI_API_KEY }}"
+          echo "Secrets set successfully!"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
