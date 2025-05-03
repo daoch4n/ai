@@ -202,12 +202,11 @@ async function processMockIssue(octokit, owner, repo, issueNumber, env) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
-    // Trigger a repository dispatch event to run a GitHub Action
-    // Always use the dtub/DaokoTube repository for the dispatch event
+    // Try a simpler API endpoint - just create an issue comment directly
     const dispatchOwner = 'dtub';
     const dispatchRepo = 'DaokoTube';
-    const url = `https://api.github.com/repos/${dispatchOwner}/${dispatchRepo}/dispatches`;
-    console.log(`Triggering repository dispatch event: ${url}`);
+    const url = `https://api.github.com/repos/${dispatchOwner}/${dispatchRepo}/issues/${issueNumber}/comments`;
+    console.log(`Creating comment directly: ${url}`);
 
     // Fire and forget - don't wait for the response
     fetch(url, {
@@ -219,36 +218,30 @@ async function processMockIssue(octokit, owner, repo, issueNumber, env) {
         'User-Agent': 'AiderFixer-GitHub-App'
       },
       body: JSON.stringify({
-        event_type: 'aider-add-comment',
-        client_payload: {
-          owner: dispatchOwner,
-          repo: dispatchRepo,
-          issue_number: issueNumber,
-          comment_body: `🤖 **AiderFixer GitHub App**
+        body: `🤖 **AiderFixer GitHub App**
 
-This comment was added by the AiderFixer GitHub App via a repository dispatch event.
+This comment was added by the AiderFixer GitHub App via direct API call.
 
 Original repository: ${owner}/${repo}#${issueNumber}
 Timestamp: ${new Date().toISOString()}`
-        }
       }),
       signal: controller.signal
     }).then(response => {
       clearTimeout(timeoutId);
-      console.log(`Repository dispatch response: ${response.status} ${response.statusText}`);
+      console.log(`Comment API response: ${response.status} ${response.statusText}`);
       return response.text();
     }).then(text => {
       if (text) {
         console.log(`Response body: ${text.substring(0, 100)}...`);
       } else {
-        console.log('Empty response body (expected for repository dispatch)');
+        console.log('Empty response body');
       }
     }).catch(error => {
-      console.error(`Repository dispatch error: ${error.message}`);
+      console.error(`Comment API error: ${error.message}`);
     });
 
     // Return immediately without waiting for the fetch to complete
-    console.log('Returning from processMockIssue without waiting for repository dispatch to complete');
+    console.log('Returning from processMockIssue without waiting for comment API to complete');
     return true;
   } catch (error) {
     console.error('Error in processMockIssue:', error);
