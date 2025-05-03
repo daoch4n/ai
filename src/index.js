@@ -193,60 +193,216 @@ function getFallbackOctokit(env) {
   return octokit;
 }
 
-// Process an issue by triggering a GitHub Action
+// Process an issue using the GitHub App authentication
 async function processMockIssue(octokit, owner, repo, issueNumber, env) {
   try {
-    console.log('Processing issue by triggering a GitHub Action');
+    console.log('Processing issue using GitHub App authentication');
 
-    // Create a simple controller with a short timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+    // Try to get an authenticated Octokit instance using the GitHub App
+    try {
+      // Get a JWT token for the GitHub App
+      const jwt = await createJWT(env.APP_ID, env.PRIVATE_KEY);
+      console.log('Created JWT token for GitHub App');
 
-    // Try a simpler API endpoint - just create an issue comment directly
-    const dispatchOwner = 'dtub';
-    const dispatchRepo = 'DaokoTube';
-    const url = `https://api.github.com/repos/${dispatchOwner}/${dispatchRepo}/issues/${issueNumber}/comments`;
-    console.log(`Creating comment directly: ${url}`);
+      // Get an installation token
+      const installationId = 65784439; // Hardcoded for now
+      const installationToken = await getInstallationToken(jwt, installationId);
+      console.log('Got installation token');
 
-    // Fire and forget - don't wait for the response
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `token ${env.PAT_PAT}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'AiderFixer-GitHub-App'
-      },
-      body: JSON.stringify({
-        body: `🤖 **AiderFixer GitHub App**
+      // Create a comment using the installation token
+      const commentUrl = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`;
+      console.log(`Creating comment using GitHub App: ${commentUrl}`);
 
-This comment was added by the AiderFixer GitHub App via direct API call.
+      // Create a simple controller with a short timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+
+      // Fire and forget - don't wait for the response
+      fetch(commentUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${installationToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'AiderFixer-GitHub-App'
+        },
+        body: JSON.stringify({
+          body: `🤖 **AiderFixer GitHub App**
+
+This comment was added by the AiderFixer GitHub App using its own authentication.
+
+Timestamp: ${new Date().toISOString()}`
+        }),
+        signal: controller.signal
+      }).then(response => {
+        clearTimeout(timeoutId);
+        console.log(`Comment API response: ${response.status} ${response.statusText}`);
+        return response.text();
+      }).then(text => {
+        if (text) {
+          console.log(`Response body: ${text.substring(0, 100)}...`);
+        } else {
+          console.log('Empty response body');
+        }
+      }).catch(error => {
+        console.error(`Comment API error: ${error.message}`);
+      });
+
+      console.log('Returning from processMockIssue without waiting for comment API to complete');
+      return true;
+    } catch (appAuthError) {
+      console.error('Error with GitHub App authentication:', appAuthError);
+
+      // Fall back to using PAT_PAT if GitHub App authentication fails
+      console.log('Falling back to PAT_PAT authentication');
+
+      // Create a simple controller with a short timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+
+      // Try a simpler API endpoint - just create an issue comment directly
+      const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}/comments`;
+      console.log(`Creating comment using PAT_PAT: ${url}`);
+
+      // Fire and forget - don't wait for the response
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${env.PAT_PAT}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'AiderFixer-GitHub-App'
+        },
+        body: JSON.stringify({
+          body: `🤖 **AiderFixer GitHub App (Fallback)**
+
+This comment was added by the AiderFixer GitHub App using PAT_PAT fallback.
 
 Original repository: ${owner}/${repo}#${issueNumber}
 Timestamp: ${new Date().toISOString()}`
-      }),
-      signal: controller.signal
-    }).then(response => {
-      clearTimeout(timeoutId);
-      console.log(`Comment API response: ${response.status} ${response.statusText}`);
-      return response.text();
-    }).then(text => {
-      if (text) {
-        console.log(`Response body: ${text.substring(0, 100)}...`);
-      } else {
-        console.log('Empty response body');
-      }
-    }).catch(error => {
-      console.error(`Comment API error: ${error.message}`);
-    });
+        }),
+        signal: controller.signal
+      }).then(response => {
+        clearTimeout(timeoutId);
+        console.log(`Comment API response (fallback): ${response.status} ${response.statusText}`);
+        return response.text();
+      }).then(text => {
+        if (text) {
+          console.log(`Response body (fallback): ${text.substring(0, 100)}...`);
+        } else {
+          console.log('Empty response body (fallback)');
+        }
+      }).catch(error => {
+        console.error(`Comment API error (fallback): ${error.message}`);
+      });
 
-    // Return immediately without waiting for the fetch to complete
-    console.log('Returning from processMockIssue without waiting for comment API to complete');
-    return true;
+      // Return immediately without waiting for the fetch to complete
+      console.log('Returning from processMockIssue without waiting for fallback API to complete');
+      return true;
+    }
   } catch (error) {
     console.error('Error in processMockIssue:', error);
     return false;
   }
+}
+
+// Create a JWT token for GitHub App authentication
+async function createJWT(appId, privateKey) {
+  // Current time in seconds
+  const now = Math.floor(Date.now() / 1000);
+
+  // JWT header
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT'
+  };
+
+  // JWT payload
+  const payload = {
+    iat: now,           // Issued at time
+    exp: now + 600,     // Expires in 10 minutes
+    iss: appId          // GitHub App ID
+  };
+
+  // Encode header and payload
+  const encodedHeader = btoa(JSON.stringify(header));
+  const encodedPayload = btoa(JSON.stringify(payload));
+
+  // Create the JWT signature using Web Crypto API
+  const encoder = new TextEncoder();
+  const data = encoder.encode(`${encodedHeader}.${encodedPayload}`);
+
+  // Import the private key
+  const pemHeader = '-----BEGIN PRIVATE KEY-----';
+  const pemFooter = '-----END PRIVATE KEY-----';
+  const pemContents = privateKey.trim();
+
+  // Make sure the private key is in the correct format
+  let formattedKey = pemContents;
+  if (!formattedKey.includes(pemHeader)) {
+    formattedKey = `${pemHeader}\n${formattedKey.replace(/-----BEGIN RSA PRIVATE KEY-----/, '').replace(/-----END RSA PRIVATE KEY-----/, '')}\n${pemFooter}`;
+  }
+
+  // Convert the PEM key to a format that can be imported
+  const pemDER = formattedKey
+    .replace(pemHeader, '')
+    .replace(pemFooter, '')
+    .replace(/\s+/g, '');
+
+  const binaryDER = atob(pemDER);
+  const buffer = new ArrayBuffer(binaryDER.length);
+  const bufView = new Uint8Array(buffer);
+  for (let i = 0; i < binaryDER.length; i++) {
+    bufView[i] = binaryDER.charCodeAt(i);
+  }
+
+  // Import the key
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    buffer,
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: { name: 'SHA-256' }
+    },
+    false,
+    ['sign']
+  );
+
+  // Sign the data
+  const signature = await crypto.subtle.sign(
+    { name: 'RSASSA-PKCS1-v1_5' },
+    key,
+    data
+  );
+
+  // Convert the signature to base64
+  const signatureBase64 = btoa(String.fromCharCode(...new Uint8Array(signature)));
+
+  // Create the JWT token
+  return `${encodedHeader}.${encodedPayload}.${signatureBase64}`;
+}
+
+// Get an installation token for a GitHub App
+async function getInstallationToken(jwt, installationId) {
+  const response = await fetch(
+    `https://api.github.com/app/installations/${installationId}/access_tokens`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${jwt}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'AiderFixer-GitHub-App'
+      }
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to get installation token: ${response.status} ${response.statusText}\n${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.token;
 }
 
 // Process an issue with Aider
