@@ -1,16 +1,15 @@
-# AiderFixer GitHub App
+# 🚧 AiderFixer GitHub App 🚧 It just comments for now 🚧
 
-A Cloudflare Worker that implements a GitHub App to automatically generate pull requests from issues labeled with "aider-pro".
+🚧 A Cloudflare Worker that implements a GitHub App to automatically generate pull requests from issues labeled with "aider-pro". 🚧
 
-## Features
+## Features 🚧
 
-- Listens for the "aider-pro" label being added to issues
-- Creates a new branch for the issue
-- Either:
-  - Triggers the `aider-process-issue.yml` workflow if it exists in the repository
-  - Creates a placeholder PR with instructions if the workflow doesn't exist
-- Adds appropriate labels and comments to track progress
-
+- Listens for the "aider-pro" label being added to issues ✅
+- Creates a new branch for the issue 🚧
+- Either: 🚧
+  - Triggers the `aider-process-issue.yml` workflow if it exists in the repository 🚧
+- Adds appropriate labels and comments to track progress ✅
+# 🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧
 ## Setup
 
 ### 1. Register a GitHub App
