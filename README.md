@@ -9,7 +9,7 @@
 - Either: 🚧
   - Triggers the `aider-process-issue.yml` workflow if it exists in the repository 🚧
 - Adds appropriate labels and comments to track progress ✅
-# 🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧
+# 🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧
 ## Setup
 
 ### 1. Register a GitHub App
