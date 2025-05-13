@@ -6,10 +6,11 @@
 
 - Listens for the "aider-pro" label being added to issues ✅
 - Creates a new branch for the issue 🚧
-- Either: 🚧
-  - Triggers the `aider-process-issue.yml` workflow if it exists in the repository 🚧
+- Triggers the `aider-process-issue.yml` workflow if it exists in the repository 🚧
 - Adds appropriate labels and comments to track progress ✅
+
 # 🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧
+
 ## Setup
 
 ### 1. Register a GitHub App
