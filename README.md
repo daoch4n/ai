@@ -18,7 +18,7 @@
 
 1. Go to GitHub > Settings > Developer settings > GitHub Apps > New GitHub App
 2. Configure the app:
-   - Name: "AiderFixer"
+   - Name: namE
    - Homepage URL: Your repository URL
    - Webhook URL: The URL of your deployed Cloudflare Worker
    - Webhook secret: Generate a secure random string
@@ -90,7 +90,7 @@
    npm run deploy
    ```
 
-### 3. Install the GitHub App
+### 3. Install your new GitHub App
 
 1. Install the GitHub App on your repository
 2. Create the necessary labels in your repository:
