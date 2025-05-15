@@ -1,4 +1,4 @@
-# 🪄 AiderFixer GitHub App ✨ 
+# 🪄 zen-ai ✨ 
 # 🚧 It just comments for now 🚧
 
 🚧 A Cloudflare Worker that implements a GitHub App to automatically generate pull requests from issues labeled with "aider-pro". 🚧
