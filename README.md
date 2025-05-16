@@ -1,13 +1,13 @@
 # 🪄 zen-ai ✨ 
 # 🚧 It just comments for now 🚧
 
-🚧 A Cloudflare Worker that implements a GitHub App to automatically generate pull requests from issues labeled with "aider-pro". 🚧
+🚧 A Cloudflare Worker that implements a GitHub App to automatically generate pull requests from issues labeled with "zen-ai". 🚧
 
 ## Features 🚧
 
-- Listens for the "aider-pro" label being added to issues ✅
+- Listens for the "zen-ai" label being added to issues ✅
 - Creates a new branch for the issue 🚧
-- Triggers the `aider-process-issue.yml` workflow if it exists in the repository 🚧
+- Triggers the `zen-process-issue.yml` workflow if it exists in the repository 🚧
 - Adds appropriate labels and comments to track progress ✅
 
 # 🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧🚧
@@ -94,7 +94,7 @@
 
 1. Install the GitHub App on your repository
 2. Create the necessary labels in your repository:
-   - `aider-pro`: To trigger the workflow
+   - `zen-ai`: To trigger the workflow
    - `ai-processing`: Added automatically during processing
    - `ai-processed`: Added automatically after processing
    - `ai-generated`: Added to pull requests
@@ -102,11 +102,11 @@
 ## Usage
 
 1. Create an issue in your repository
-2. Add the "aider-pro" label to the issue
+2. Add the "zen-ai" label to the issue
 3. The GitHub App will:
    - Add the "ai-processing" label to the issue
    - Create a new branch
-   - Either trigger the `aider-process-issue.yml` workflow or create a placeholder PR
+   - Either trigger the `zen-process-issue.yml` workflow or create a placeholder PR
    - Add a comment to the issue with a link to the PR
    - Add the "ai-processed" label to the issue
 
