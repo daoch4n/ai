@@ -1,4 +1,4 @@
-# 🪄 zen-ai ✨ 
+# 🪄 zen-ai-dev-hook-worker 🪝🔧
 # 🚧 It just comments for now 🚧
 
 🚧 A Cloudflare Worker that implements a GitHub App to automatically generate pull requests from issues labeled with "zen-ai". 🚧
